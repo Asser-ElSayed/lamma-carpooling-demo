@@ -22,7 +22,9 @@ ASP.NET Core 10 Minimal API route groups, C#, EF Core and SQL Server. One applic
 
 ## Access instructions
 
-This repository runs the demo **locally**. There is no publicly hosted API URL; `localhost` opens the API only on the computer running it. Clone the private repository using a GitHub account with access:
+The demo can be reviewed without downloading the project using the [temporary live Swagger UI](https://productive-str-comment-affected.trycloudflare.com/swagger/index.html). This link requires the owner's laptop, internet connection, API and tunnel to remain running; it is not a persistent hosted deployment. Reviewers obtain a fresh **Reviewer Access** sheet from the owner, copy the chosen Host/Rider token, and paste it into Swagger's Authorize dialog. Reviewers do not need .NET or terminal commands.
+
+For local development, clone the private repository using a GitHub account with access:
 
 ```powershell
 git clone https://github.com/Asser-ElSayed/lamma-carpooling-demo.git
@@ -30,6 +32,14 @@ cd lamma-carpooling-demo
 ```
 
 There are **no username/password login credentials or login endpoint** in this scoped demo. Seeded account IDs and short-lived signed development tokens provide access. Follow the setup and Swagger authorization instructions below. All three business features can then be exercised directly in Swagger; no mobile app or additional API client is required.
+
+The **demo owner** can prepare the reviewer sheet immediately before a review:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/New-ReviewerAccess.ps1 -BaseUrl https://productive-str-comment-affected.trycloudflare.com
+```
+
+Send `.local/Reviewer-Access.html` or `.local/Reviewer-Access.txt` to the reviewers with the Swagger link. The HTML sheet includes copy buttons, an idempotency-key generator, account purposes and an explicit expiry time. It includes Host, Rider1–4, UnapprovedHost and InactiveRider tokens. Tokens expire after one hour; the owner regenerates the sheet for a later review. Generated credentials are ignored by Git; the signing key is never included.
 
 ## Prerequisites
 

@@ -10,6 +10,9 @@ public static class OpenApiSetup
     {
         services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
         {
+            // Resolve against the viewer's origin so HTTPS review links never point
+            // Try It Out at localhost or a proxy's internal HTTP URL.
+            document.Servers = [new OpenApiServer { Url = "/", Description = "Current demo server" }];
             document.Info = new() { Title = "Lamma — Credosis Backend Demo", Version = "v1",
                 Description = "Publish a three-seat ride, search a curated corridor, and confirm one seat atomically. Use signed development JWTs via Authorize. Search availability is a snapshot." };
             document.Components ??= new();

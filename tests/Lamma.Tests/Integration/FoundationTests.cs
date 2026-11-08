@@ -13,6 +13,7 @@ public sealed class FoundationTests
         using var client = factory.CreateClient();
         Assert.Contains("swagger-ui", await client.GetStringAsync("/swagger/index.html"));
         using var document = JsonDocument.Parse(await client.GetStringAsync("/openapi/v1.json"));
+        Assert.Equal("/", document.RootElement.GetProperty("servers")[0].GetProperty("url").GetString());
         Assert.Equal("Lamma — Credosis Backend Demo", document.RootElement.GetProperty("info").GetProperty("title").GetString());
         Assert.Equal("bearer", document.RootElement.GetProperty("components").GetProperty("securitySchemes").GetProperty("Bearer").GetProperty("scheme").GetString());
         var paths = document.RootElement.GetProperty("paths");
