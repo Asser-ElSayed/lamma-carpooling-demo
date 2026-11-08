@@ -31,7 +31,7 @@ git clone https://github.com/Asser-ElSayed/lamma-carpooling-demo.git
 cd lamma-carpooling-demo
 ```
 
-There are **no username/password login credentials or login endpoint** in this scoped demo. Seeded account IDs and short-lived signed development tokens provide access. Follow the setup and Swagger authorization instructions below. All three business features can then be exercised directly in Swagger; no mobile app or additional API client is required.
+There are **no username/password login credentials or login endpoint** in this scoped demo. Seeded account IDs and signed, expiring development tokens provide access. Follow the setup and Swagger authorization instructions below. All three business features can then be exercised directly in Swagger; no mobile app or additional API client is required.
 
 The **demo owner** can prepare the reviewer sheet immediately before a review:
 
@@ -39,7 +39,7 @@ The **demo owner** can prepare the reviewer sheet immediately before a review:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/New-ReviewerAccess.ps1 -BaseUrl https://productive-str-comment-affected.trycloudflare.com
 ```
 
-Send `.local/Reviewer-Access.html` or `.local/Reviewer-Access.txt` to the reviewers with the Swagger link. The HTML sheet includes copy buttons, an idempotency-key generator, account purposes and an explicit expiry time. It includes Host, Rider1–4, UnapprovedHost and InactiveRider tokens. Tokens expire after one hour; the owner regenerates the sheet for a later review. Generated credentials are ignored by Git; the signing key is never included.
+Send `.local/Reviewer-Access.html` or `.local/Reviewer-Access.txt` to the reviewers with the Swagger link. The HTML sheet includes copy buttons, an idempotency-key generator, account purposes and an explicit expiry time. It includes Host, Rider1–4, UnapprovedHost and InactiveRider tokens. **Reviewer tokens default to 30 days**, so reviewers can reuse the sheet throughout the review period. Set `-ValidityDays` to a shorter duration when desired (1–30 days). The exact expiry appears in the sheet. These are synthetic demo accounts; current SQL permissions are still checked on every operation. Generated credentials are ignored by Git; the signing key is never included. Longer token validity does not keep the API online: this temporary link still requires the owner's computer and internet connection.
 
 ## Prerequisites
 

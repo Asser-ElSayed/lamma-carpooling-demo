@@ -1,6 +1,8 @@
 param(
     [string]$BaseUrl = 'http://localhost:5234',
-    [string]$OutputDirectory = '.local'
+    [string]$OutputDirectory = '.local',
+    [ValidateRange(1, 30)]
+    [int]$ValidityDays = 30
 )
 $ErrorActionPreference = 'Stop'
 $project = Join-Path $PSScriptRoot '../src/Lamma.Api/Lamma.Api.csproj'
@@ -12,7 +14,7 @@ New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $rows = @()
 foreach ($account in $accounts.Keys) {
     $id = '10000000-0000-0000-0000-{0:000000000000}' -f $accounts[$account]
-    $token = (dotnet user-jwts create --project $project --name $id --audience lamma-demo --valid-for 1h --output token | Out-String).Trim()
+    $token = (dotnet user-jwts create --project $project --name $id --audience lamma-demo --valid-for ($ValidityDays.ToString() + 'd') --output token | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or $token -notmatch '^ey') { throw "Could not generate $account token." }
     $payload = $token.Split('.')[1].Replace('-', '+').Replace('_', '/')
     while ($payload.Length % 4) { $payload += '=' }
