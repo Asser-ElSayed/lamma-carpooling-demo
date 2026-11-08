@@ -2,7 +2,7 @@
 
 ## What has been built
 
-Three business endpoints implement the approved [planning baseline v1.1](Lamma_Backend_Planning_Document_v1.1.md): an approved Host publishes a **three-passenger-seat** ride, an active Rider searches an ordered corridor, and a Rider confirms **one seat** without overbooking. Swagger UI is the demo client.
+Three business endpoints implement the approved [planning baseline v1.1](docs/planning/README.md): an approved Host publishes a **three-passenger-seat** ride, an active Rider searches an ordered corridor, and a Rider confirms **one seat** without overbooking. Swagger UI is the demo client.
 
 ASP.NET Core 10 Minimal API route groups, C#, EF Core and SQL Server. One application, one database, one test project. Services use `AppDbContext` directly. The future Lamma product roadmap is outside this executable.
 
