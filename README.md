@@ -1,8 +1,35 @@
 # Lamma — Credosis backend demonstration
 
+## What has been built
+
 Three business endpoints implement the approved [planning baseline v1.1](Lamma_Backend_Planning_Document_v1.1.md): an approved Host publishes a **three-passenger-seat** ride, an active Rider searches an ordered corridor, and a Rider confirms **one seat** without overbooking. Swagger UI is the demo client.
 
 ASP.NET Core 10 Minimal API route groups, C#, EF Core and SQL Server. One application, one database, one test project. Services use `AppDbContext` directly. The future Lamma product roadmap is outside this executable.
+
+## Implemented features
+
+| Feature | Implemented behavior |
+|---|---|
+| Ride publishing | Approved Hosts publish future rides between active ordered meeting nodes; the server assigns exactly three seats |
+| Corridor search | Same corridor/direction, ordered segment containment, explicit intermediate-stop opt-in, bounded UTC window and deterministic ranking |
+| Immediate booking | Active Riders confirm one seat per ride; self-booking and duplicate Rider/Ride reservations are rejected |
+| Capacity protection | One SQL transaction guards the seat decrement, Full transition and booking insert; failed inserts roll back the debit |
+| Retry protection | Required Rider-scoped Idempotency-Key; identical retries return the same booking without another seat debit |
+| Authentication and permissions | Signed, expiring development JWTs with current SQL account/membership/Host permission checks |
+| Persistent database | Committed EF Core migrations, SQL constraints/indexes and repeatable synthetic fixture seeding |
+| Swagger UI | All three business operations expose editable inputs, bearer authorization, response schemas and documented error codes |
+| Error handling and verification | Correlated Problem Details, safe structured logs, domain tests and real-SQL integration/concurrency tests |
+
+## Access instructions
+
+This repository runs the demo **locally**. There is no publicly hosted API URL; `localhost` opens the API only on the computer running it. Clone the private repository using a GitHub account with access:
+
+```powershell
+git clone https://github.com/Asser-ElSayed/lamma-carpooling-demo.git
+cd lamma-carpooling-demo
+```
+
+There are **no username/password login credentials or login endpoint** in this scoped demo. Seeded account IDs and short-lived signed development tokens provide access. Follow the setup and Swagger authorization instructions below. All three business features can then be exercised directly in Swagger; no mobile app or additional API client is required.
 
 ## Prerequisites
 
@@ -20,10 +47,11 @@ dotnet tool restore
 dotnet build Lamma.sln --no-restore
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 dotnet run --project src/Lamma.Api --no-launch-profile -- --seed
+dotnet user-jwts create --project src/Lamma.Api --name 10000000-0000-0000-0000-000000000001 --audience lamma-demo --valid-for 1h --output token
 dotnet run --project src/Lamma.Api --launch-profile http
 ```
 
-Open **http://localhost:5234/swagger/index.html**. The JSON specification is **http://localhost:5234/openapi/v1.json**. The launch profile also supports HTTPS at `https://localhost:7235` after your normal `dotnet dev-certs https --trust` setup. Local HTTP is sufficient for this synthetic demonstration.
+Copy the generated Host token, keep the API terminal running, and open **[Swagger UI](http://localhost:5234/swagger/index.html)**. The [OpenAPI JSON](http://localhost:5234/openapi/v1.json) describes the same three operations. The launch profile also supports HTTPS at `https://localhost:7235` after your normal `dotnet dev-certs https --trust` setup. Local HTTP is sufficient for this synthetic demonstration.
 
 `--seed` explicitly applies committed EF migrations and adds missing synthetic fixture rows; it does not reset rides, bookings or changed account permissions. Seeding does not run during normal startup. To apply only the schema:
 
@@ -93,6 +121,29 @@ Each full node ID starts `20000000-0000-0000-0000-` and ends in the twelve-digit
 | `GET /rides/search` | Active member; pickup/dropoff nodes, `fromUtc`, `toUtc` | `200`, up to 20 matches or `[]` |
 | `POST /bookings` | Active member; `rideId` and required `Idempotency-Key` header | `201` Confirmed; identical replay `200` |
 
+## Test every feature through Swagger UI
+
+1. Click **Authorize**, paste the Host token without `Bearer`, apply the credentials, and close the dialog.
+2. Expand **Rides → POST /rides**. The editable example contains real seeded node IDs and a future departure. Click **Execute** and expect `201`, `status: Published`, `seatCapacity: 3`, `availableSeats: 3`. Copy the returned `id` and departure time.
+3. Generate a **Rider1** token using the wrapper above. In Authorize, log out the old token, apply the Rider token, and close the dialog.
+4. Expand **Rides → GET /rides/search**. Enter pickup node 2, drop-off node 3, and a UTC window around the ride's departure, at most two hours wide. Click **Execute**. Expect `200` containing the ride and its factual match reasons. Searching as the publishing Host excludes that Host's own offer.
+5. Expand **Bookings → POST /bookings**. Paste the returned ride ID into the JSON body. Enter a fresh UUID in the required **Idempotency-Key** header field; for a first attempt, `8c54bd03-cfd8-4f71-9eb4-4f225f8b249d` is an example. Click **Execute**. Expect `201`, `status: Confirmed`, `seats: 1`.
+6. Execute the exact same body and key again. Expect `200` and the same booking ID. Search again to see availability reduced by one, not two.
+7. Switch tokens to Rider2 and Rider3 and book the same ride, each with a fresh key. The third successful booking fills the ride. Switch to Rider4 and try: expect `409 SEATS_UNAVAILABLE`; the Full ride disappears from search.
+8. To inspect validation/authorization, try publishing as UnapprovedHost (`403`), add `seatCapacity` to the publish JSON (`400`), or reuse an already committed key with another ride (`409 IDEMPOTENCY_KEY_REUSED`). Expand each operation's Responses section for its schema and documented errors.
+
+Swagger enables editing by default. If an operation is not editable, select **Try it out**. Request examples are starting points: reuse the actual ride ID and keep publish/search timestamps consistent. API response bodies and headers are shown beneath **Server response** after execution.
+
+## How the key features work
+
+**Publishing:** the API derives the Host from the validated token and checks current approval in SQL. It validates future departure and the node sequence, then persists a Published ride with server-owned capacity and availability set to three.
+
+**Matching:** SQL filters eligible future rides by corridor/direction, time, seat availability and current Host permission. Exact endpoints match directly; shorter segments require the Host's intermediate-stop opt-in. SQL ranks and limits the candidates before `RideMatcher` verifies the rules and returns factual explanations. Search does not reserve a seat.
+
+**Booking and retries:** the API checks current Rider permission and existing idempotency/duplicate records. One conditional SQL update and booking insert share a transaction. Only a successful commit consumes a seat. The final seat atomically marks the ride Full. A retry returns the committed booking; competing or invalid attempts cannot create extra seats or bookings.
+
+### Request examples and business rules
+
 Publish example — **replace the timestamp with a future UTC time**:
 
 ```json
@@ -124,6 +175,21 @@ Failures use `application/problem+json` with `type`, `title`, `status`, safe `de
 
 ## Tests and live smoke check
 
+The repository contains **49 relevant automated test cases**, including the real SQL Server race/rollback checks required by the planning document. Test source is kept so another reviewer can verify the behavior; generated results, build output, local tokens and temporary verification clones are ignored by Git. The unused template `UnitTest1.cs` has been removed.
+
+Stop the running API with **Ctrl+C before rebuilding or running `dotnet test` on Windows**, so its executable is not locked. Restart the API afterward for the Swagger walkthrough or live smoke script.
+
+| Test file / support | Purpose |
+|---|---|
+| `DomainTests.cs` | Domain invariants and corridor/stop rules |
+| `PublishingTests.cs` | Publish contracts, current Host approval and signed-token failures |
+| `SearchTests.cs` | SQL matching, ordering, window bounds and result limits |
+| `BookingTests.cs` | Capacity, duplicates, retries, concurrent final-seat races and rollback |
+| `EligibilityTests.cs` | Current permission revocation, inactive nodes, departed rides and key boundaries |
+| `SchemaTests.cs` | Clean migrations, persistence, fixtures and SQL constraints |
+| `FoundationTests.cs` | Swagger/OpenAPI contracts and Development-only startup |
+| `DemoFactory.cs`, `SqlFixture.cs` | Shared signed-JWT API host and isolated disposable SQL Server database needed by the integration tests |
+
 ```powershell
 dotnet test Lamma.sln --logger 'console;verbosity=normal'
 ```
@@ -148,6 +214,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Smoke-Test.ps1
 ```
 
 The smoke script uses official developer JWTs, checks Swagger/OpenAPI, publishes, searches, books, retries, fills the ride and verifies a fourth Rider's `409`. It adds a synthetic ride/bookings to the demo database. [Validation evidence](docs/validation.md) maps tests to AC-01–AC-10. [Reviewer walkthrough](docs/demo-walkthrough.md) provides a 3–5 minute sequence.
+
+## Troubleshooting
+
+| Symptom | Action |
+|---|---|
+| Swagger cannot open | Keep `dotnet run` running; check the listening URL in its output; use `/swagger/index.html` on that same computer |
+| `401 UNAUTHENTICATED` | Generate a fresh token for this project, paste it without `Bearer`, and restart the API if the first signing key was generated after startup |
+| `403 HOST_NOT_APPROVED` | Publishing needs the approved Host fixture, not a Rider or UnapprovedHost token |
+| `400 VALIDATION_FAILED` | Check the required fields, seeded node IDs, future departure and two-hour maximum search window; remove extra seat/user fields |
+| `200 []` search | Use the Rider token, matching date/time and ordered nodes; Full, departed and own offers are excluded |
+| `409` booking | Read the stable `code`: full ride, duplicate Rider/Ride, or a key already committed for another payload |
+| SQL connection/table error | Start SQL Server, configure `ConnectionStrings__Lamma` if needed, and run the explicit `--seed` migration/fixture command |
+| Build reports that `Lamma.Api.exe` is locked | Stop the API with Ctrl+C, run the build/tests, then start it again |
 
 ## Structure and decisions
 

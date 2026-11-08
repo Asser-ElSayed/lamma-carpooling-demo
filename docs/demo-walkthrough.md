@@ -1,5 +1,7 @@
 # Reviewer walkthrough — 3–5 minutes
 
+Recording status: the walkthrough script is ready. A video file has not been produced: Windows Snipping Tool returned to its launcher instead of exposing usable recording-selection controls on both attempts in this session. The API, automated SQL Server evidence and live Swagger requests are verified separately.
+
 Prepare: migrate/seed, run the API, generate Host and Rider1–4 one-hour tokens. Run the full SQL Server test suite and keep the final-seat test output ready. Use an uncluttered browser tab at http://localhost:5234/swagger/index.html. Do not show token-generation output/signing keys in a published recording.
 
 | Time | Action | Evidence to explain |
