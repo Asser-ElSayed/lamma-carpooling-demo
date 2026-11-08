@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+TestResults/
+artifacts/
+.tools/
+.local/
+*.user
+*.suo
+*.log
+*.trx
+*.mp4
+*.webm
+.env
+appsettings.Local.json
