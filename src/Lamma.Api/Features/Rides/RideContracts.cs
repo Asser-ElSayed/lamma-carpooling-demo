@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Lamma.Api.Features.Rides;
 
@@ -17,7 +18,11 @@ public sealed record RideResponse(Guid Id, Guid OriginNodeId, Guid DestinationNo
 }
 
 /// <summary>A UTC window of at most two hours; one passenger seat is implicit.</summary>
-public sealed record SearchRidesRequest(Guid PickupNodeId, Guid DropoffNodeId, DateTimeOffset FromUtc, DateTimeOffset ToUtc);
+public sealed record SearchRidesRequest(
+    [property: FromQuery(Name = "pickupNodeId")] Guid PickupNodeId,
+    [property: FromQuery(Name = "dropoffNodeId")] Guid DropoffNodeId,
+    [property: FromQuery(Name = "fromUtc")] DateTimeOffset FromUtc,
+    [property: FromQuery(Name = "toUtc")] DateTimeOffset ToUtc);
 
 public sealed record RideSearchResponse(Guid Id, Guid OriginNodeId, Guid DestinationNodeId,
     Guid PickupNodeId, Guid DropoffNodeId, DateTimeOffset DepartureAtUtc, int AvailableSeats, string[] MatchReasons);

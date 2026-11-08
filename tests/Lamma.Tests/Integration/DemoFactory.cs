@@ -9,11 +9,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Lamma.Tests.Integration;
 
 // Real signed JWTs and the real SQL provider; authentication is never replaced by a fake handler.
-public sealed class DemoFactory(SqlFixture sql) : WebApplicationFactory<Program>
+public sealed class DemoFactory(SqlFixture sql, DbCommandInterceptor? interceptor = null, TimeProvider? clock = null) : WebApplicationFactory<Program>
 {
     private readonly byte[] key = RandomNumberGenerator.GetBytes(32);
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -24,15 +26,20 @@ public sealed class DemoFactory(SqlFixture sql) : WebApplicationFactory<Program>
             ["ConnectionStrings:Lamma"] = sql.ConnectionString,
             ["Logging:LogLevel:Default"] = "None"
         }));
-        builder.ConfigureServices(services => services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
+        builder.ConfigureServices(services =>
         {
-            o.TokenValidationParameters = new()
+            if (clock is not null) services.AddSingleton(clock);
+            if (interceptor is not null) services.AddDbContext<AppDbContext>(o => o.AddInterceptors(interceptor));
+            services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
             {
-                ValidateIssuer = true, ValidIssuer = "lamma-tests", ValidateAudience = true, ValidAudience = "lamma-tests",
-                ValidateIssuerSigningKey = true, IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateLifetime = true, ClockSkew = TimeSpan.Zero, NameClaimType = "sub"
-            };
-        }));
+                o.TokenValidationParameters = new()
+                {
+                    ValidateIssuer = true, ValidIssuer = "lamma-tests", ValidateAudience = true, ValidAudience = "lamma-tests",
+                    ValidateIssuerSigningKey = true, IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateLifetime = true, ClockSkew = TimeSpan.Zero, NameClaimType = "sub"
+                };
+            });
+        });
     }
 
     public HttpClient As(Guid accountId, DateTime? expires = null, bool wrongKey = false)

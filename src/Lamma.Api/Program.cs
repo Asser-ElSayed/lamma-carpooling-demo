@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Lamma.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Lamma.Api.Features.Rides;
+using Lamma.Api.Features.Bookings;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -15,7 +16,7 @@ if (!builder.Environment.IsDevelopment())
 builder.Services.ConfigureHttpJsonOptions(o =>
 {
     o.SerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow;
-    o.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    o.SerializerOptions.Converters.Add(new JsonStringEnumConverter<RideStatus>());
 });
 builder.Services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
 builder.Services.AddSingleton(TimeProvider.System);
@@ -47,6 +48,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddDemoOpenApi();
 builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlServer(builder.Configuration.GetConnectionString("Lamma")));
 builder.Services.AddScoped<RideService>();
+builder.Services.AddScoped<BookingService>();
 
 var app = builder.Build();
 if (args.Contains("--seed"))
@@ -71,6 +73,7 @@ app.Use(async (context, next) =>
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapRideEndpoints();
+app.MapBookingEndpoints();
 app.MapOpenApi();
 app.UseSwaggerUI(o =>
 {
