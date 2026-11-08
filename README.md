@@ -1,4 +1,4 @@
-# Lamma — Credosis backend demonstration
+# Carpooling MVP —  backend demonstration
 
 ## What has been built
 
