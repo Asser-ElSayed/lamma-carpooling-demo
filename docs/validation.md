@@ -28,3 +28,5 @@ The failed-insert test injects an exception into the SQL command immediately aft
 The test suite uses EF Core's SQL Server provider throughout. It does not use EF InMemory or SQLite to make SQL Server concurrency claims. Re-run the documented commands on a fresh checkout for current evidence.
 
 NuGet audit (`dotnet list Lamma.sln package --vulnerable --include-transitive`) reported no vulnerable packages in either project using the configured sources. Explicit patched OpenAPI/PKCS references avoid vulnerable versions inherited by other packages.
+
+Fresh GitHub clone verification: restored the local EF tool and NuGet dependencies, then ran all **49 tests successfully** from `.local/fresh-checkout`. The clone used a new disposable SQL database and the committed solution/migrations, without generated build artifacts. The original working tree was clean and local/remote `main` matched after publication.
