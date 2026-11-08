@@ -2,6 +2,9 @@ using System.Text.Json.Serialization;
 using Lamma.Api.Common;
 using Lamma.Api.Common.ErrorHandling;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Lamma.Api.Data;
+using Microsoft.EntityFrameworkCore;
+using Lamma.Api.Features.Rides;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -25,6 +28,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     o.TokenValidationParameters.NameClaimType = "sub";
     o.Events = new JwtBearerEvents
     {
+        OnTokenValidated = c =>
+        {
+            if (!Guid.TryParse(c.Principal?.FindFirst("sub")?.Value, out var id) || id == Guid.Empty)
+                c.Fail("A synthetic account subject is required.");
+            return Task.CompletedTask;
+        },
         OnChallenge = async c =>
         {
             c.HandleResponse();
@@ -36,8 +45,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 builder.Services.AddAuthorization();
 builder.Services.AddDemoOpenApi();
+builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlServer(builder.Configuration.GetConnectionString("Lamma")));
+builder.Services.AddScoped<RideService>();
 
 var app = builder.Build();
+if (args.Contains("--seed"))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+    await SeedData.ApplyAsync(db);
+    app.Logger.LogInformation("Development schema migrated and synthetic fixtures seeded.");
+    return;
+}
 app.UseExceptionHandler();
 app.UseStatusCodePages(async c =>
     await ApiResults.Problem(c.HttpContext, c.HttpContext.Response.StatusCode, "HTTP_ERROR", "The request could not be completed.").ExecuteAsync(c.HttpContext));
@@ -50,6 +70,7 @@ app.Use(async (context, next) =>
 });
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapRideEndpoints();
 app.MapOpenApi();
 app.UseSwaggerUI(o =>
 {
