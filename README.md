@@ -22,7 +22,7 @@ ASP.NET Core 10 Minimal API route groups, C#, EF Core and SQL Server. One applic
 
 ## Access instructions
 
-The demo can be reviewed without downloading the project using the [temporary live Swagger UI](https://productive-str-comment-affected.trycloudflare.com/swagger/index.html). This link requires the owner's laptop, internet connection, API and tunnel to remain running; it is not a persistent hosted deployment. Reviewers obtain a fresh **Reviewer Access** sheet from the owner, copy the chosen Host/Rider token, and paste it into Swagger's Authorize dialog. Reviewers do not need .NET or terminal commands.
+The demo can be reviewed without downloading the project using the [temporary live Swagger UI](https://productive-str-comment-affected.trycloudflare.com/swagger/index.html). At the top, use **Try the demo — choose an account** to select **Host** or **Rider1–4**. Swagger obtains a fresh signed JWT and authorizes the selected account automatically. Tokens renew before requests when nearing expiry, so reviewers can keep testing without requesting replacement tokens or downloading a token sheet. **Copy JWT** is available for reviewers who want the token itself. The link requires the owner's laptop, internet connection, API and tunnel to remain running; it is not a persistent hosted deployment.
 
 For local development, clone the private repository using a GitHub account with access:
 
@@ -31,9 +31,13 @@ git clone https://github.com/Asser-ElSayed/lamma-carpooling-demo.git
 cd lamma-carpooling-demo
 ```
 
-There are **no username/password login credentials or login endpoint** in this scoped demo. Seeded account IDs and signed, expiring development tokens provide access. Follow the setup and Swagger authorization instructions below. All three business features can then be exercised directly in Swagger; no mobile app or additional API client is required.
+There are **no username/password credentials** to distribute for this synthetic demo. The Swagger account selector provides reviewer access; the three business operations still require signed JWTs and current SQL permissions. The demo-only token helper is opt-in, only runs in Development, and accepts only the seven fixed seeded account names. It is documentation tooling, excluded from the OpenAPI business-operation list.
 
-The **demo owner** can prepare the reviewer sheet immediately before a review:
+The supplied launch profiles enable the reviewer selector. For a custom launch without a profile, set `$env:ReviewerAccess__Enabled = 'true'`. Without that explicit setting the helper and its script are unavailable. The API continues to reject non-Development startup.
+
+### Optional offline access sheets
+
+The account selector is the primary reviewer workflow. If an offline token sheet is useful, the **demo owner** can still generate one:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/New-ReviewerAccess.ps1 -BaseUrl https://productive-str-comment-affected.trycloudflare.com
@@ -46,6 +50,7 @@ Send `.local/Reviewer-Access.html` or `.local/Reviewer-Access.txt` to the review
 - .NET 10 SDK (the repository selects 10.0.202 or a later 10.0 feature band).
 - SQL Server Express/Developer, or another SQL Server instance where your development account can create a database. The default is Windows integrated authentication to `.\SQLEXPRESS`.
 - PowerShell for the optional token and smoke-test scripts.
+- Node.js 18+ only to run the JavaScript reviewer-flow tests; reviewers do not need it.
 
 ## Build, migrate, seed and run
 
@@ -77,9 +82,13 @@ $env:ConnectionStrings__Lamma = 'Server=YOUR_SERVER;Database=LammaDemo;Integrate
 
 The checked-in Express setting disables encryption only for the local synthetic demo. SQL Server tests use the actual SQL Server provider and transactions. There is no EF InMemory/SQLite substitute.
 
-## Development tokens and Swagger Authorize
+## Reviewer authorization and optional developer tokens
 
-Generate a one-hour token in a second terminal:
+**Reviewers:** select an account from the green panel above the operations. Selecting **Host** authorizes publishing; selecting **Rider1–4** authorizes searching and booking. Select **UnapprovedHost** or **InactiveRider** for the documented negative tests. **Get fresh token / authorize** forces a new token whenever desired. No terminal commands or token files are required. Clearing the selection signs out.
+
+The browser holds the token in memory and obtains another when needed before an endpoint request. Tokens expire individually, but reviewers do not need to track their expiry or contact the owner. Signing keys stay on the server.
+
+**Developers or other API clients:** manual JWT generation remains available. Generate a one-hour token in a second terminal:
 
 ```powershell
 dotnet user-jwts create --project src/Lamma.Api --name 10000000-0000-0000-0000-000000000001 --audience lamma-demo --valid-for 1h --output token
@@ -133,13 +142,13 @@ Each full node ID starts `20000000-0000-0000-0000-` and ends in the twelve-digit
 
 ## Test every feature through Swagger UI
 
-1. Click **Authorize**, paste the Host token without `Bearer`, apply the credentials, and close the dialog.
+1. At the top of Swagger, select **Host** in **Demo account**. Wait for **Authorized as Host**; no token copy/paste is needed.
 2. Expand **Rides → POST /rides**. The editable example contains real seeded node IDs and a future departure. Click **Execute** and expect `201`, `status: Published`, `seatCapacity: 3`, `availableSeats: 3`. Copy the returned `id` and departure time.
-3. Generate a **Rider1** token using the wrapper above. In Authorize, log out the old token, apply the Rider token, and close the dialog.
+3. Change **Demo account** to **Rider1** and wait for the authorization confirmation.
 4. Expand **Rides → GET /rides/search**. Enter pickup node 2, drop-off node 3, and a UTC window around the ride's departure, at most two hours wide. Click **Execute**. Expect `200` containing the ride and its factual match reasons. Searching as the publishing Host excludes that Host's own offer.
 5. Expand **Bookings → POST /bookings**. Paste the returned ride ID into the JSON body. Enter a fresh UUID in the required **Idempotency-Key** header field; for a first attempt, `8c54bd03-cfd8-4f71-9eb4-4f225f8b249d` is an example. Click **Execute**. Expect `201`, `status: Confirmed`, `seats: 1`.
 6. Execute the exact same body and key again. Expect `200` and the same booking ID. Search again to see availability reduced by one, not two.
-7. Switch tokens to Rider2 and Rider3 and book the same ride, each with a fresh key. The third successful booking fills the ride. Switch to Rider4 and try: expect `409 SEATS_UNAVAILABLE`; the Full ride disappears from search.
+7. Select Rider2 and Rider3 in turn and book the same ride, each with a fresh key. The third successful booking fills the ride. Select Rider4 and try: expect `409 SEATS_UNAVAILABLE`; the Full ride disappears from search.
 8. To inspect validation/authorization, try publishing as UnapprovedHost (`403`), add `seatCapacity` to the publish JSON (`400`), or reuse an already committed key with another ride (`409 IDEMPOTENCY_KEY_REUSED`). Expand each operation's Responses section for its schema and documented errors.
 
 Swagger enables editing by default. If an operation is not editable, select **Try it out**. Request examples are starting points: reuse the actual ride ID and keep publish/search timestamps consistent. API response bodies and headers are shown beneath **Server response** after execution.
@@ -185,7 +194,7 @@ Failures use `application/problem+json` with `type`, `title`, `status`, safe `de
 
 ## Tests and live smoke check
 
-The repository contains **49 relevant automated test cases**, including the real SQL Server race/rollback checks required by the planning document. Test source is kept so another reviewer can verify the behavior; generated results, build output, local tokens and temporary verification clones are ignored by Git. The unused template `UnitTest1.cs` has been removed.
+The repository contains **63 .NET test cases and seven JavaScript tests**, including the real SQL Server race/rollback checks and the self-service reviewer flow. Test source is kept so another reviewer can verify the behavior; generated results, build output, local tokens and temporary verification clones are ignored by Git. The unused template `UnitTest1.cs` has been removed.
 
 Stop the running API with **Ctrl+C before rebuilding or running `dotnet test` on Windows**, so its executable is not locked. Restart the API afterward for the Swagger walkthrough or live smoke script.
 
@@ -198,10 +207,13 @@ Stop the running API with **Ctrl+C before rebuilding or running `dotnet test` on
 | `EligibilityTests.cs` | Current permission revocation, inactive nodes, departed rides and key boundaries |
 | `SchemaTests.cs` | Clean migrations, persistence, fixtures and SQL constraints |
 | `FoundationTests.cs` | Swagger/OpenAPI contracts and Development-only startup |
+| `ReviewerAccessTests.cs` | Opt-in reviewer helper, allowlisted identities, signed token issuance, fresh tokens and unchanged SQL permission checks |
+| `tests/swagger-reviewer-access.test.cjs` | Browser account switching, automatic renewal, concurrent renewal, sign-out, errors and same-origin credential handling |
 | `DemoFactory.cs`, `SqlFixture.cs` | Shared signed-JWT API host and isolated disposable SQL Server database needed by the integration tests |
 
 ```powershell
 dotnet test Lamma.sln --logger 'console;verbosity=normal'
+node --test tests/swagger-reviewer-access.test.cjs
 ```
 
 The integration fixture creates and drops only its own `LammaTests_<random GUID>` SQL database. The configured user therefore needs create/drop-database permission. It does not delete the demo database. To point tests at another SQL Server, set the **server connection** (its database name is replaced by the fixture):
@@ -230,7 +242,9 @@ The smoke script uses official developer JWTs, checks Swagger/OpenAPI, publishes
 | Symptom | Action |
 |---|---|
 | Swagger cannot open | Keep `dotnet run` running; check the listening URL in its output; use `/swagger/index.html` on that same computer |
-| `401 UNAUTHENTICATED` | Generate a fresh token for this project, paste it without `Bearer`, and restart the API if the first signing key was generated after startup |
+| `401 UNAUTHENTICATED` | Choose an account in the reviewer panel or use Get fresh token / authorize. For manual clients, generate a fresh token for this project |
+| Reviewer panel is absent | Owner: use a supplied launch profile or set `ReviewerAccess__Enabled=true`, restart the API, and refresh Swagger |
+| Reviewer panel reports setup unavailable | Owner: run the seed command and configure a developer signing key with the documented `dotnet user-jwts` command, then restart |
 | `403 HOST_NOT_APPROVED` | Publishing needs the approved Host fixture, not a Rider or UnapprovedHost token |
 | `400 VALIDATION_FAILED` | Check the required fields, seeded node IDs, future departure and two-hour maximum search window; remove extra seat/user fields |
 | `200 []` search | Use the Rider token, matching date/time and ordered nodes; Full, departed and own offers are excluded |

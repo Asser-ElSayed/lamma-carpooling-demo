@@ -2,7 +2,7 @@
 
 Recording status: the walkthrough script is ready. A video file has not been produced: Windows Snipping Tool returned to its launcher instead of exposing usable recording-selection controls on both attempts in this session. The API, automated SQL Server evidence and live Swagger requests are verified separately.
 
-Prepare: migrate/seed, run the API, generate Host and Rider1–4 one-hour tokens. Run the full SQL Server test suite and keep the final-seat test output ready. Use an uncluttered browser tab at http://localhost:5234/swagger/index.html. Do not show token-generation output/signing keys in a published recording.
+Prepare: migrate/seed and run the API with reviewer access enabled (the supplied launch profiles enable it). Run the full SQL Server test suite and keep the final-seat test output ready. Use an uncluttered browser tab at http://localhost:5234/swagger/index.html. Select Host or Rider1–4 in the top reviewer panel as the walkthrough progresses; tokens are supplied and renewed automatically. Do not show signing keys in a published recording.
 
 | Time | Action | Evidence to explain |
 |---|---|---|
@@ -15,6 +15,6 @@ Prepare: migrate/seed, run the API, generate Host and Rider1–4 one-hour tokens
 | 3:35–4:00 | Show an unapproved Host's POST /rides or attempted capacity field | 403 HOST_NOT_APPROVED or 400 VALIDATION_FAILED, Problem Details with traceId |
 | 4:00–4:30 | Show the automated final-seat race test and passing suite | Two independent Riders compete after two bookings: one 201, one 409, exactly three persisted bookings. Swagger alone does not prove concurrency |
 
-Use the example bodies and full seed IDs in README. Replace the example departure timestamp if it is no longer in the future. When switching Swagger tokens, open Authorize, Logout the old token, paste the new JWT without `Bearer`, Authorize, Close.
+Use the example bodies and full seed IDs in README. Replace the example departure timestamp if it is no longer in the future. Switch identities using the Demo account selector and wait for its Authorized confirmation. Manual bearer Authorize remains available for other API clients.
 
 Explain the boundary: node/corridor matching, immediate confirmation and development JWTs are implemented. Live detours, university verification, Host acceptance, cancellation, payments, notifications and AI are deferred. A working Swagger assessment is not a real-user pilot readiness claim.

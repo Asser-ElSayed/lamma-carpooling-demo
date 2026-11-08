@@ -2,10 +2,11 @@
 
 Implementation baseline: planning v1.1, decisions D-01–D-08, 8 November 2026. Validation uses .NET SDK 10.0.202 / runtime 10.0.6 and real local SQL Server Express. Each integration run migrates a new uniquely named test database and drops only that database afterward.
 
-Complete reviewed suite: **49 passed, 0 failed, 0 skipped**. Recorded command:
+Current reviewed suite: **63 .NET tests and seven JavaScript tests passed**, with no failures. The original backend suite contained 49 cases; the additional cases verify self-service reviewer authorization. Recorded commands:
 
 ```powershell
 dotnet test Lamma.sln --no-restore --logger 'console;verbosity=minimal' --logger trx --results-directory artifacts/test-results
+node --test tests/swagger-reviewer-access.test.cjs
 ```
 
 Generated `.trx` evidence stays in ignored `artifacts/test-results`. The live smoke script also passed with official `dotnet user-jwts` tokens: Swagger/OpenAPI 200, publishing 201 with three seats, intermediate-stop search 200, booking 201, identical replay 200, third-seat fill, fourth Rider 409, and full ride absent from search. Tokens were omitted from script output.
@@ -28,5 +29,7 @@ The failed-insert test injects an exception into the SQL command immediately aft
 The test suite uses EF Core's SQL Server provider throughout. It does not use EF InMemory or SQLite to make SQL Server concurrency claims. Re-run the documented commands on a fresh checkout for current evidence.
 
 NuGet audit (`dotnet list Lamma.sln package --vulnerable --include-transitive`) reported no vulnerable packages in either project using the configured sources. Explicit patched OpenAPI/PKCS references avoid vulnerable versions inherited by other packages.
+
+Self-service reviewer evidence: `ReviewerAccessTests` verifies that only the seven fixed synthetic account names receive tokens, each token is accepted by real JWT bearer validation, inactive accounts retain their expected 403, unapproved Hosts cannot publish, repeated token requests produce fresh JWTs, helper responses are not cacheable, opt-in is required, and OpenAPI still describes exactly three business paths. The JavaScript tests verify account switching, renewal after expiry, concurrent renewal, sign-out, error feedback and stripping credentials from other-origin requests. Local Chrome inspection confirms the selector renders and the selected account locks all three Swagger operations. The live developer configuration also issued a valid token locally, without exposing its signing key.
 
 Fresh GitHub clone verification: restored the local EF tool and NuGet dependencies, then ran all **49 tests successfully** from `.local/fresh-checkout`. The clone used a new disposable SQL database and the committed solution/migrations, without generated build artifacts. The original working tree was clean and local/remote `main` matched after publication.

@@ -6,6 +6,7 @@ using Lamma.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Lamma.Api.Features.Rides;
 using Lamma.Api.Features.Bookings;
+using Lamma.Api.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -75,11 +76,17 @@ app.UseAuthorization();
 app.MapRideEndpoints();
 app.MapBookingEndpoints();
 app.MapOpenApi();
+var reviewerAccessEnabled = app.MapReviewerAccess();
 app.UseSwaggerUI(o =>
 {
     o.SwaggerEndpoint("/openapi/v1.json", "Lamma v1");
     o.DocumentTitle = "Lamma API — Swagger";
     o.EnableTryItOutByDefault();
+    if (reviewerAccessEnabled)
+    {
+        o.InjectJavascript("/swagger/reviewer-access.js");
+        o.UseRequestInterceptor("(request) => window.lammaReviewerRequest ? window.lammaReviewerRequest(request) : request");
+    }
 });
 app.Run();
 

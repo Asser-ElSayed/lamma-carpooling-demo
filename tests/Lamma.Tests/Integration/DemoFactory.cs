@@ -15,7 +15,8 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 namespace Lamma.Tests.Integration;
 
 // Real signed JWTs and the real SQL provider; authentication is never replaced by a fake handler.
-public sealed class DemoFactory(SqlFixture sql, DbCommandInterceptor? interceptor = null, TimeProvider? clock = null) : WebApplicationFactory<Program>
+public sealed class DemoFactory(SqlFixture sql, DbCommandInterceptor? interceptor = null, TimeProvider? clock = null,
+    bool reviewerAccess = false) : WebApplicationFactory<Program>
 {
     private readonly byte[] key = RandomNumberGenerator.GetBytes(32);
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -24,6 +25,7 @@ public sealed class DemoFactory(SqlFixture sql, DbCommandInterceptor? intercepto
         builder.ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:Lamma"] = sql.ConnectionString,
+            ["ReviewerAccess:Enabled"] = reviewerAccess.ToString(),
             ["Logging:LogLevel:Default"] = "None"
         }));
         builder.ConfigureServices(services =>
