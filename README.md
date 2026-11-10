@@ -22,7 +22,7 @@ ASP.NET Core 10 Minimal API route groups, C#, EF Core and SQL Server. One applic
 
 ## Access instructions
 
-The demo can be reviewed without downloading the project using the [temporary live Swagger UI](https://productive-str-comment-affected.trycloudflare.com/swagger/index.html). At the top, use **Try the demo — choose an account** to select **Host** or **Rider1–4**. Swagger obtains a fresh signed JWT and authorizes the selected account automatically. Tokens renew before requests when nearing expiry, so reviewers can keep testing without requesting replacement tokens or downloading a token sheet. **Copy JWT** is available for reviewers who want the token itself. The link requires the owner's laptop, internet connection, API and tunnel to remain running; it is not a persistent hosted deployment.
+The demo can be reviewed without downloading the project using the [temporary live Swagger UI](https://shows-southampton-main-sends.trycloudflare.com/swagger/index.html). At the top, use **Try the demo — choose an account** to select **Host** or **Rider1–4**. Swagger obtains a fresh signed JWT and authorizes the selected account automatically. Tokens renew before requests when nearing expiry, so reviewers can keep testing without requesting replacement tokens or downloading a token sheet. **Copy JWT** is available for reviewers who want the token itself. The link requires the owner's laptop, internet connection, API and tunnel to remain running; it is not a persistent hosted deployment.
 
 For local development, clone the private repository using a GitHub account with access:
 
@@ -40,7 +40,7 @@ The supplied launch profiles enable the reviewer selector. For a custom launch w
 The account selector is the primary reviewer workflow. If an offline token sheet is useful, the **demo owner** can still generate one:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/New-ReviewerAccess.ps1 -BaseUrl https://productive-str-comment-affected.trycloudflare.com
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/New-ReviewerAccess.ps1 -BaseUrl https://shows-southampton-main-sends.trycloudflare.com
 ```
 
 Send `.local/Reviewer-Access.html` or `.local/Reviewer-Access.txt` to the reviewers with the Swagger link. The HTML sheet includes copy buttons, an idempotency-key generator, account purposes and an explicit expiry time. It includes Host, Rider1–4, UnapprovedHost and InactiveRider tokens. **Reviewer tokens default to 30 days**, so reviewers can reuse the sheet throughout the review period. Set `-ValidityDays` to a shorter duration when desired (1–30 days). The exact expiry appears in the sheet. These are synthetic demo accounts; current SQL permissions are still checked on every operation. Generated credentials are ignored by Git; the signing key is never included. Longer token validity does not keep the API online: this temporary link still requires the owner's computer and internet connection.
